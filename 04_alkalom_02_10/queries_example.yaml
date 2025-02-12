@@ -1,0 +1,86 @@
+create_tables: |
+  CREATE TABLE IF NOT EXISTS customers (
+      customer_id SERIAL PRIMARY KEY,
+      first_name VARCHAR(50),
+      last_name VARCHAR(50),
+      email VARCHAR(100),
+      phone VARCHAR(20),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS loans (
+      loan_id SERIAL PRIMARY KEY,
+      customer_id INTEGER NOT NULL REFERENCES customers(customer_id),
+      loan_amount NUMERIC(12,2),
+      interest_rate NUMERIC(4,2),
+      loan_date DATE,
+      term_months INTEGER,
+      status VARCHAR(20)
+  );
+
+insert_customers: |
+  INSERT INTO customers (first_name, last_name, email, phone) VALUES
+  ('John',  'Doe',    'john.doe@example.com',  '123-456-7890'),
+  ('Jane',  'Smith',  'jane.smith@example.com', '555-123-4567'),
+  ('Alice', 'Brown',  'alice.brown@example.com','555-987-6543'),
+  ('Bob',   'Johnson','bob.johnson@example.com', '555-111-2222'),
+  ('Carol', 'White',  'carol.white@example.com','555-333-4444'),
+  ('Dave',  'Black',  'dave.black@example.com', '555-666-7777');
+
+insert_loans: |
+  INSERT INTO loans (customer_id, loan_amount, interest_rate, loan_date, term_months, status) VALUES
+  (1, 10000.00, 5.5, '2023-01-15', 36, 'active'),
+  (1, 5000.00,  4.5, '2022-06-20', 24, 'closed'),
+  (2, 15000.00, 6.0, '2023-03-10', 48, 'active'),
+  (3, 2000.00,  3.5, '2022-11-05', 12, 'closed'),
+  (4, 8000.00,  4.0, '2023-02-28', 36, 'active'),
+  (5, 12000.00, 5.0, '2022-09-15', 24, 'defaulted'),
+  (6, 3000.00,  3.8, '2023-04-01', 12, 'active'),
+  (2, 7000.00,  4.2, '2021-12-25', 24, 'closed'),
+  (3, 5000.00,  5.0, '2023-05-20', 36, 'active');
+
+query_having: |
+  SELECT customer_id, COUNT(loan_id) AS loan_count
+  FROM loans
+  GROUP BY customer_id
+  HAVING COUNT(loan_id) > 1;
+
+query_offset: |
+  SELECT *
+  FROM customers
+  ORDER BY customer_id
+  LIMIT 5 OFFSET 2;
+
+query_complex: |
+  SELECT c.customer_id, c.first_name, c.last_name, SUM(l.loan_amount) AS total_loans
+  FROM customers c
+  JOIN loans l ON c.customer_id = l.customer_id
+  GROUP BY c.customer_id, c.first_name, c.last_name
+  HAVING SUM(l.loan_amount) > 5000;
+
+query_subquery: |
+  SELECT customer_id, 
+         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_loans,
+         SUM(CASE WHEN status <> 'active' THEN 1 ELSE 0 END) AS non_active_loans
+  FROM loans
+  GROUP BY customer_id
+  HAVING SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) > 
+         SUM(CASE WHEN status <> 'active' THEN 1 ELSE 0 END);
+
+query_delete: |
+  DELETE FROM loans
+  WHERE status = 'closed';
+
+query_truncate: |
+  TRUNCATE TABLE loans RESTART IDENTITY;
+
+query_offset_join: |
+  SELECT c.customer_id, c.first_name, c.last_name, l.loan_id, l.loan_amount, l.status
+  FROM customers c
+  JOIN loans l ON c.customer_id = l.customer_id
+  ORDER BY c.customer_id, l.loan_id
+  LIMIT 3 OFFSET 1;
+
+# Bulk beszúráshoz használt lekérdezés a YAML-ban
+insert_bulk_customers: |
+  INSERT INTO customers (first_name, last_name, email, phone)
+  VALUES (%s, %s, %s, %s)

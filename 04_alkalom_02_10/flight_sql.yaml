@@ -1,0 +1,53 @@
+create_tables: |
+  CREATE TABLE IF NOT EXISTS flights (
+      id SERIAL PRIMARY KEY,
+      flight_number VARCHAR(10) UNIQUE NOT NULL,
+      destination VARCHAR(50) NOT NULL,
+      seats INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS passengers (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(50) NOT NULL,
+      email VARCHAR(100) UNIQUE NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS bookings (
+      id SERIAL PRIMARY KEY,
+      flight_id INTEGER REFERENCES flights(id) ON DELETE CASCADE,
+      passenger_id INTEGER REFERENCES passengers(id) ON DELETE CASCADE
+  );
+
+insert_flight: |
+  INSERT INTO flights (flight_number, destination, seats) VALUES (%s, %s, %s);
+
+insert_passenger: |
+  INSERT INTO passengers (name, email) VALUES (%s, %s);
+
+create_booking: |
+  INSERT INTO bookings (flight_id, passenger_id) VALUES (%s, %s);
+
+get_full_flights: |
+  SELECT flight_id, COUNT(*) 
+  FROM bookings 
+  GROUP BY flight_id 
+  HAVING COUNT(*) >= (SELECT seats FROM flights WHERE flights.id = flight_id);
+
+get_passengers_with_at_least_1_bookings: |
+  SELECT passengers.id, passengers.name, COUNT(bookings.id) AS booking_count
+  FROM passengers
+  JOIN bookings ON passengers.id = bookings.passenger_id
+  GROUP BY passengers.id
+  HAVING COUNT(bookings.id) >= 0;
+
+get_last_5_flights: |
+  SELECT * FROM flights ORDER BY id DESC LIMIT 5;
+
+get_flights_without_bookings: |
+  SELECT flights.* FROM flights 
+  LEFT JOIN bookings ON flights.id = bookings.flight_id 
+  WHERE bookings.id IS NULL;
+
+delete_booking: |
+  DELETE FROM bookings WHERE id = %s;
+
+truncate_bookings: |
+  TRUNCATE TABLE bookings RESTART IDENTITY CASCADE;
